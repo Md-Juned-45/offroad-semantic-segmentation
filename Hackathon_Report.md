@@ -1,135 +1,337 @@
-# Duality AI Offroad Autonomy Segmentation Report
+# Duality AI Offroad Semantic Scene Segmentation Report
 
 ## 1. Title and Summary
 
 **Team Name:** Team Chaos  
-**Project Name:** Offroad Autonomy Semantic Segmentation
+**Project Name:** Offroad Autonomy Semantic Segmentation  
+**Track:** Duality AI Offroad Semantic Scene Segmentation Challenge
 
-This project focuses on semantic segmentation for off-road autonomous navigation using synthetic data provided by Duality AI. Our objective was to classify each pixel in an off-road scene into one of 11 semantic classes, including trees, bushes, rocks, landscape, sky, logs, and flowers. We built a complete pipeline covering training code, evaluation, visualization, and an interactive demo interface for qualitative testing.
+This project tackles pixel-wise semantic segmentation for off-road autonomy using synthetic desert scenes generated with Duality AI Falcon. The goal is to help an autonomous ground vehicle understand terrain structure and obstacles by assigning a semantic label to every pixel in an image.
 
-The actual hackathon training run was performed in a **Kaggle Notebook GPU environment**, and the resulting model checkpoint was exported for local inference and demo usage in this repository.
+Our team trained and iteratively improved multiple segmentation models in a **Kaggle Notebook GPU environment**, then exported the best checkpoint for local inference and demo usage. The final solution achieved a **best validation mIoU of 0.5245** on the provided validation split and includes:
 
-## 2. Methodology
+- training code
+- batch inference code
+- exported model weights
+- a Flask-based interactive demo UI
+- documentation for reproducibility and presentation
 
-### Model Architecture
+## 2. Challenge Context
 
-We selected **DeepLabV3+** with a **MiT-B2** backbone from `segmentation_models_pytorch`.
+Duality AI's challenge focuses on training robust semantic segmentation models using synthetic desert environments and then evaluating how well those models generalize to unseen but related desert scenes. This setting is highly relevant for off-road autonomous navigation, where vehicles must distinguish terrain, vegetation, obstacles, and clutter under changing visual conditions.
 
-This choice gave us a strong balance between segmentation quality and inference efficiency:
-- DeepLabV3+ captures multi-scale context effectively through atrous spatial pyramid pooling.
-- MiT-B2 provides a lightweight but expressive encoder well-suited for dense prediction tasks.
-- The architecture performed well for irregular natural structures common in off-road environments.
+Semantic segmentation is especially important for off-road autonomy because path planning decisions depend on fine-grained scene understanding rather than simple object detection alone.
 
-### Dataset Handling and Preprocessing
+## 3. Objective
 
-The dataset contains synthetic off-road scenes with paired segmentation masks. We organized the data into training, validation, and test splits using the following structure:
+The core objectives of our work were:
 
-```text
-data/
-  train/
-    Color_Images/
-    Segmentation/
-  val/
-    Color_Images/
-    Segmentation/
-  testImages/
-    Color_Images/
-    Segmentation/
+- train a robust semantic segmentation model using only the provided synthetic dataset
+- improve generalization to unseen desert environments
+- optimize the training setup through architecture, augmentation, and loss design
+- document the workflow, experiments, metrics, and failure cases clearly for judges
+
+## 4. Dataset Overview
+
+The dataset contains RGB images and paired segmentation masks for desert scenes. The data is organized into `train`, `val`, and `testImages` splits. We strictly kept the test images separate from training and validation throughout the project.
+
+### Semantic Classes
+
+| Raw ID | Class Name |
+|---|---|
+| 0 | Background |
+| 100 | Trees |
+| 200 | Lush Bushes |
+| 300 | Dry Grass |
+| 500 | Dry Bushes |
+| 550 | Ground Clutter |
+| 600 | Flowers |
+| 700 | Logs |
+| 800 | Rocks |
+| 7100 | Landscape |
+| 10000 | Sky |
+
+### Dataset Compliance
+
+To remain compliant with the challenge rules:
+
+- we trained only on the provided training split
+- we used the provided validation split for model selection
+- we did not use the designated test images for training
+- the final checkpoint was selected based on validation performance only
+
+## 5. Training Environment
+
+The main training workflow was executed in **Kaggle Notebook** using GPU acceleration. Kaggle was chosen because it provided a practical environment for experimentation, model downloads, iterative retraining, and checkpoint export during the hackathon.
+
+Our local repository contains the code used for the final approach, the exported checkpoint, and local scripts for testing and the demo UI.
+
+## 6. Methodology
+
+## 6.1 Overall Workflow
+
+```mermaid
+flowchart LR
+    A["Synthetic RGB + Segmentation Masks"] --> B["Mask ID Remapping"]
+    B --> C["Train / Validation Split"]
+    C --> D["Augmentation + Normalization"]
+    D --> E["Model Training in Kaggle"]
+    E --> F["Validation mIoU Tracking"]
+    F --> G["Best Checkpoint Export"]
+    G --> H["Batch Inference + Flask Demo"]
 ```
 
-We converted raw mask values into contiguous training class IDs to support multi-class segmentation training.
+## 6.2 Experiment Progression
 
-### Data Augmentation
+We did not jump directly to the final model. Instead, we iteratively improved the pipeline based on validation performance and observed class-level weaknesses.
 
-To reduce overfitting and improve generalization to unseen environments, we applied augmentations using `albumentations`:
+| Version | Model | Key Characteristics | Best Val IoU / mIoU |
+|---|---|---|---|
+| V1 | DINOv2 ViT-S/14 + custom ConvNeXt-style segmentation head | Kaggle-optimized prototype, 10 classes, no flower class mapping | 0.3991 |
+| V2 | DeepLabV3+ with EfficientNet-B3 encoder | Combined CE + Dice loss, stronger augmentation, better dense prediction baseline | 0.4672 |
+| V3 | DeepLabV3+ with MiT-B2 encoder | Added missing flower class, Albumentations pipeline, class weights, warm restarts, mixed precision | **0.5245** |
+
+### Why the Earlier Versions Were Important
+
+**V1: DINOv2 Prototype**
+- helped us establish the first realistic benchmark quickly in Kaggle
+- showed that the dataset was learnable
+- revealed that the segmentation head alone was not enough to reach competitive performance
+- also exposed an important issue: the original class mapping omitted **Flowers (ID 600)**, reducing class coverage to 10 classes
+
+**V2: DeepLabV3+ EfficientNet-B3**
+- significantly improved spatial segmentation quality over the DINOv2 prototype
+- raised validation IoU from `0.3991` to `0.4672`
+- confirmed that a dedicated segmentation architecture worked better than the first custom setup
+
+**V3: DeepLabV3+ MiT-B2 Final Model**
+- restored the missing flower class and expanded the task back to the required 11 classes
+- switched to stronger `albumentations` transforms
+- used better class weighting for rare classes and stronger optimization
+- produced the best final score: `0.5245` mIoU
+
+## 6.3 Final Model Configuration
+
+The final and best-performing configuration used:
+
+- **Architecture:** DeepLabV3+
+- **Encoder:** MiT-B2
+- **Framework:** `segmentation_models_pytorch`
+- **Input resolution:** `512 x 512`
+- **Batch size:** `8`
+- **Epochs:** `60`
+- **Optimizer:** AdamW
+- **Learning rates:** lower LR for encoder, higher LR for decoder and head
+- **Scheduler:** CosineAnnealingWarmRestarts
+- **Precision:** mixed precision with `torch.amp`
+
+## 6.4 Preprocessing and Augmentation
+
+For the final model, we used `albumentations` because it gave us better control over paired image-mask transforms and richer augmentation options than our earlier torchvision-only setup.
+
+Final training augmentations included:
+
+- resize to `512 x 512`
 - horizontal flip
 - vertical flip
-- random rotation
-- shift, scale, and rotate
-- grid distortion and elastic transform
+- random 90-degree rotation
+- affine transforms with scale, translation, and rotation
+- grid distortion
+- elastic transform
 - color jitter
 - gaussian blur
 - grayscale conversion
-- normalization
+- ImageNet normalization
 
-These transformations were especially helpful in preventing the model from memorizing synthetic textures or lighting patterns.
+Validation used only resize and normalization to keep evaluation stable.
 
-### Loss Function and Optimization
+## 6.5 Mask Mapping Fix
 
-A major challenge in the dataset was class imbalance. Large classes such as landscape and sky dominate the scene, while classes like flowers, logs, and dry grass occupy relatively small regions.
+One of the most important corrections we made was restoring the missing **Flowers** class.
 
-To address this, we used:
-- **weighted cross-entropy loss** to emphasize underrepresented classes
-- **Dice loss** to improve overlap-based segmentation quality
+Early experiments used a `value_map` with only 10 classes:
+- `0, 100, 200, 300, 500, 550, 700, 800, 7100, 10000`
 
-The final training objective was a combined weighted CE + Dice loss.
+In the final pipeline, we corrected the mapping to include:
+- `600 -> Flowers`
 
-For optimization, we used:
-- **AdamW** optimizer
-- **CosineAnnealingWarmRestarts** learning rate scheduling
-- differential learning rates for encoder and decoder components
-- mixed precision training for improved speed and memory efficiency on GPU
+This ensured that the final model aligned with the official challenge class list and learned all required categories.
 
-### Training Environment
+## 6.6 Loss Function and Optimization Strategy
 
-The main experiment and best-performing checkpoint were produced in **Kaggle Notebook** using GPU acceleration. This repository preserves the code used for training and provides the exported model checkpoint for local batch inference and Flask-based demo testing.
+The final training objective combined:
 
-## 3. Results and Performance
+- **weighted cross-entropy loss**
+- **Dice loss**
 
-Our best validation performance reached:
+This combination worked well because:
+- cross-entropy stabilized class prediction learning
+- Dice loss directly rewarded better mask overlap
+- class weights improved learning for smaller and rarer categories such as flowers, logs, rocks, and ground clutter
 
-- **Best Validation mIoU:** `0.5257`
-- **Average Inference Speed:** typically under `50 ms` per image in the intended setup
+We also used:
+- gradient clipping for training stability
+- differential learning rates for pretrained encoder vs decoder/head
+- cosine warm restarts to encourage better convergence over longer training
 
-In addition to quantitative metrics, we generated colorized prediction masks for qualitative review and built a Flask-based web interface for interactive testing.
+## 7. Results and Performance Metrics
 
-## 4. Challenges and Solutions
+## 7.1 Final Best Score
 
-### Challenge 1: Class Imbalance
+The final model achieved:
 
-**Issue:** Rare classes such as flowers, logs, and dry grass were harder to detect because they covered fewer pixels and were often visually similar to nearby regions.
+- **Best validation mIoU:** `0.5245`
+- **Training duration:** `60 epochs`
+- **Best checkpoint:** exported from Kaggle as `best_model.pth`
 
-**Solution:** We introduced manually tuned class weights in cross-entropy loss and combined it with Dice loss. This helped the model pay more attention to smaller semantic regions during training.
+## 7.2 Training Progress Summary
 
-### Challenge 2: Overfitting to Synthetic Appearance
+The final run showed steady improvement over time:
 
-**Issue:** Since the dataset is synthetic, the model can easily overfit to texture, color distribution, and scene-specific rendering artifacts.
+| Epoch | Validation mIoU | Avg Train Loss |
+|---|---:|---:|
+| 1 | 0.2976 | 1.8731 |
+| 10 | 0.4804 | 1.1045 |
+| 20 | 0.4981 | 1.0641 |
+| 30 | 0.5139 | 1.0275 |
+| 40 | 0.5169 | 1.0147 |
+| 50 | 0.5124 | 1.0150 |
+| 57 | **0.5245** | 0.9945 |
+| 60 | 0.5242 | 0.9908 |
 
-**Solution:** We used stronger spatial and color augmentations to push the model toward learning structural features instead of memorizing exact synthetic patterns.
+This trend shows that the model converged steadily and benefited from the final augmentation and optimization setup.
 
-### Challenge 3: Thin and Ambiguous Structures
+## 7.3 Final Per-Class Validation IoU at Best Checkpoint
 
-**Issue:** Classes such as logs, clutter, and edge regions are harder to segment accurately because they are thin, irregular, and sometimes partially occluded.
+The best recorded run reached the following approximate class-level IoU values:
 
-**Solution:** The DeepLabV3+ architecture and Dice-based overlap objective helped improve mask consistency for fine structures, though these classes remain challenging.
+| Class | IoU |
+|---|---:|
+| Background | 0.0000 |
+| Trees | 0.6996 |
+| Lush Bushes | 0.6016 |
+| Dry Grass | 0.6564 |
+| Dry Bushes | 0.4771 |
+| Ground Clutter | 0.3628 |
+| Flowers | 0.5839 |
+| Logs | 0.3145 |
+| Rocks | 0.4419 |
+| Landscape | 0.6197 |
+| Sky | 0.9827 |
 
-## 5. Failure Case Analysis
+## 7.4 Interpretation of Results
 
-While the model performed well overall, a few common failure patterns remained:
+Key observations from the final results:
 
-### Shadows and Dark Regions
+- **Sky** and broad structural classes were segmented very reliably
+- **Trees**, **Dry Grass**, **Landscape**, and **Lush Bushes** achieved strong IoU
+- **Flowers** improved substantially after fixing the class mapping and using stronger weighting
+- **Logs**, **Ground Clutter**, and **Rocks** remained harder because they are smaller, thinner, and visually ambiguous
+- **Background** remained near zero, suggesting either very low presence in validation or strong confusion with nearby terrain classes such as landscape
 
-Dark or heavily occluded areas were sometimes confused with rocks or ground clutter instead of background or terrain.
+## 8. Challenges and Solutions
 
-### Rare-Class Confusion
+## 8.1 Missing Class in Early Pipeline
 
-Small flower patches and logs were occasionally absorbed into nearby dry bushes or clutter when they occupied very few pixels.
+**Problem:** Our early training pipeline did not include class `600` for **Flowers**, so the model was effectively solving a reduced 10-class problem.
 
-### Boundary Errors
+**Fix:** We corrected the mask remapping logic and updated the model to train on the full 11-class challenge specification.
 
-Transitions between landscape, bushes, and clutter sometimes produced soft or imprecise boundaries.
+**Impact:** This improved task correctness and gave the model the opportunity to learn flower regions explicitly.
 
-These observations suggest that additional boundary-aware losses, stronger rare-class sampling, or post-processing could further improve results.
+## 8.2 Low Performance in the First Architecture
 
-## 6. Conclusion
+**Problem:** The first DINOv2-based prototype plateaued at `0.3991` IoU and did not capture fine segmentation details strongly enough.
 
-We developed a complete semantic segmentation system for off-road autonomy scenes using PyTorch and DeepLabV3+ with a MiT-B2 encoder. The project includes training code, metric evaluation, batch inference, and an interactive browser demo for visual testing. The best hackathon model was trained in Kaggle Notebook and then exported for local usage. Our final system achieved a validation mIoU of `0.5257` while maintaining efficient inference performance.
+**Fix:** We moved to DeepLabV3+, which is designed directly for dense pixel prediction.
 
-## 7. Future Work
+**Impact:** The switch increased validation IoU to `0.4672`, proving the value of a stronger segmentation-specific architecture.
 
-Potential next steps include:
-- domain adaptation from synthetic to real-world off-road imagery
-- self-supervised pretraining on additional unlabeled data
-- model ensembling for improved mIoU
+## 8.3 Generalization to Unseen Scenes
+
+**Problem:** Synthetic datasets can encourage overfitting to color, lighting, or scene style.
+
+**Fix:** We introduced richer augmentations, including affine transforms, distortion, blur, grayscale, and color jitter using `albumentations`.
+
+**Impact:** The final model generalized more robustly and reached `0.5245` mIoU.
+
+## 8.4 Rare and Thin Classes
+
+**Problem:** Logs, rocks, and ground clutter occupy small or irregular regions, making them hard to segment reliably.
+
+**Fix:** We increased class weighting and used Dice loss to improve overlap for small structures.
+
+**Impact:** These classes improved, though they are still the main weakness of the system.
+
+## 9. Failure Case Analysis
+
+Even with the final model, several failure modes remain:
+
+## 9.1 Background vs Landscape Confusion
+
+The model often predicts **Landscape** for broad ground regions, while **Background** remains nearly unused. This suggests that the class boundary between generic ground and background is either weak in the data or visually difficult to separate.
+
+## 9.2 Logs and Small Obstacles
+
+**Logs** remain one of the hardest classes. They are thin, often partially occluded, and visually similar to nearby clutter or dry bushes.
+
+## 9.3 Rocks vs Ground Clutter
+
+Rocks and clutter can share texture and color patterns, especially in shadowed regions. This leads to partial confusion and lower IoU for both classes.
+
+## 9.4 Small Flower Regions
+
+Although the flower class improved significantly after the class-mapping fix, tiny flower patches still disappear in complex scenes or become absorbed into surrounding vegetation.
+
+## 10. Optimizations Used
+
+The following optimizations had the strongest impact on final performance:
+
+- correcting the class mapping to include all 11 challenge classes
+- switching from the early DINOv2 prototype to DeepLabV3+
+- replacing simple torchvision transforms with `albumentations`
+- using combined weighted cross-entropy and Dice loss
+- applying stronger class weights for underrepresented categories
+- using AdamW with differential learning rates
+- using cosine warm restarts for longer training
+- training with mixed precision on Kaggle GPU
+
+## 11. Deliverables Included in the Project
+
+Our submission package contains or references the following components:
+
+- `train.py` / Kaggle training code for the final model approach
+- `test.py` for batch inference on unseen images
+- `app.py` for interactive local demo testing
+- `best_model.pth` exported from Kaggle
+- `README.md` with run instructions
+- this markdown report for methodology, results, and analysis
+
+## 12. Conclusion
+
+We built a complete end-to-end semantic segmentation solution for off-road desert environments using synthetic data from Duality AI Falcon. The project evolved through three main model stages, with each iteration addressing a concrete weakness from the previous one.
+
+The final system combined:
+- DeepLabV3+
+- MiT-B2 encoder
+- full 11-class mask mapping
+- rich Albumentations augmentation
+- weighted CE + Dice loss
+- mixed precision Kaggle training
+
+This final setup achieved a **best validation mIoU of 0.5245**, outperforming our earlier DINOv2 and EfficientNet-based baselines and producing a practical model for demo inference and qualitative review.
+
+## 13. Future Work
+
+The most promising next improvements are:
+
+- deeper class rebalancing or focal-style loss for logs and clutter
+- stronger boundary-aware objectives for thin structures
 - test-time augmentation for more stable predictions
-- improved handling of rare and thin classes through better sampling or auxiliary losses
+- ensembling multiple backbones for higher IoU
+- domain adaptation from synthetic scenes to real-world off-road imagery
+- structured latency benchmarking on deployment hardware
+
+## 14. Short Judge Pitch
+
+We started with an early Kaggle prototype, then systematically improved the model through architecture changes, data augmentation, class remapping, and loss redesign. Our final DeepLabV3+ MiT-B2 model trained on the provided synthetic dataset reached **0.5245 validation mIoU**, supports all 11 required classes, and is packaged with both batch inference and an interactive demo for qualitative testing.
