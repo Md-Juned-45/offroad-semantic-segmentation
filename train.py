@@ -12,7 +12,7 @@ from tqdm import tqdm
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-# ✅ FIX 1: Added missing class 600 (Flowers)
+# Added missing class 600 (Flowers)
 value_map = {0:0, 100:1, 200:2, 300:3, 500:4, 550:5, 600:6, 700:7, 800:8, 7100:9, 10000:10}
 n_classes = len(value_map)  # 11
 

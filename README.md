@@ -30,7 +30,8 @@ Model training was performed in a **Kaggle Notebook** using GPU acceleration. Th
 
 ## Results
 
-- Best validation mIoU: `0.5245`
+- Kaggle Notebook: [https://www.kaggle.com/code/mdjuned45/offroad-semantic-segmentation-deeplabv3-mit-b2](https://www.kaggle.com/code/mdjuned45/offroad-semantic-segmentation-deeplabv3-mit-b2)
+- Best validation mIoU: `0.5283`
 - Inference speed: typically under `50 ms` per image in the target setup
 - Output: colorized segmentation masks for visual inspection and a browser-based interactive demo
 
@@ -48,7 +49,7 @@ The model predicts the following classes:
 - `requirements.txt` - Python dependencies
 - `Hackathon_Report.md` - short technical write-up
 - `details.pdf` - supporting report / submission material
-- `best_model.pth` - exported trained model weights if included locally
+- `best_model.pth` - not included due to file size. Download from the Kaggle notebook output: [link]
 
 ## Setup
 
@@ -75,59 +76,51 @@ data/
     Segmentation/
 ```
 
-## Training
+## Training Reference
 
-The training workflow for the hackathon was executed in Kaggle Notebook.
+The model was trained entirely on **Kaggle** due to the dataset size and GPU requirements. 
+We have included `train.py` in this repository so you can see the exact code used for training (including augmentations, our custom weighted loss function, and optimization strategies). 
 
-If you want to reproduce the experiment, run:
+*Note: If you wish to reproduce the training locally, you will need a capable GPU and must download the full dataset into the `data/` folder before running `python train.py`.*
 
-```bash
-python train.py
-```
+## How to Run Locally
 
-What the training script does:
+The intended way to use this repository is to download our pre-trained model and run inference locally.
 
-- loads training and validation data
-- applies augmentation and normalization
-- trains DeepLabV3+ with weighted CE + Dice loss
-- evaluates per-class IoU and mean IoU
-- saves the best checkpoint as `best_model.pth`
+### 1. Download Pre-trained Weights
+Since GitHub has strict file size limits, the `best_model.pth` file (248MB) is not included in this repository. 
+- Download it from our Kaggle Notebook output: [https://www.kaggle.com/code/mdjuned45/offroad-semantic-segmentation-deeplabv3-mit-b2](https://www.kaggle.com/code/mdjuned45/offroad-semantic-segmentation-deeplabv3-mit-b2)
+- Place `best_model.pth` directly in the root directory of this repository.
 
-## Testing
-
-Run:
+### 2. Batch Inference
+To run the model on a folder of unseen test images:
 
 ```bash
 python test.py
 ```
 
 This will:
+- Load the `best_model.pth` weights
+- Run inference on the images located in `data/testImages/Color_Images`
+- Save the predicted colorized masks to the `runs/test_outputs/` directory
 
-- load `best_model.pth`
-- run inference on images in `data/testImages/Color_Images`
-- save predicted color masks to `runs/test_outputs/`
-
-## Demo UI
-
-To launch the interactive web demo:
+### 3. Interactive Web Demo
+To launch the Flask web application for interactive testing:
 
 ```bash
 python app.py
 ```
 
-Then open:
-
+Then open your browser and navigate to:
 ```text
 http://127.0.0.1:5000
 ```
 
 The UI supports:
-
-- image upload
-- split-view comparison
-- overlay mask visualization
-- class legend display
-- quick qualitative testing of predictions
+- Image uploads
+- Interactive split-view comparisons
+- Overlay mask visualizations
+- A class legend display for quick qualitative testing
 
 ## Key Design Choices
 
@@ -150,7 +143,3 @@ The UI supports:
 - model ensembling for higher final IoU
 - self-supervised pretraining for better feature extraction
 - test-time augmentation and post-processing for cleaner masks
-
-## Notes For GitHub
-
-If you are publishing this repository, it is usually better not to upload large generated outputs such as `runs/` or raw datasets. Keep the code, documentation, and a few sample predictions instead.

@@ -8,7 +8,7 @@
 
 This project tackles pixel-wise semantic segmentation for off-road autonomy using synthetic desert scenes generated with Duality AI Falcon. The goal is to help an autonomous ground vehicle understand terrain structure and obstacles by assigning a semantic label to every pixel in an image.
 
-Our team trained and iteratively improved multiple segmentation models in a **Kaggle Notebook GPU environment**, then exported the best checkpoint for local inference and demo usage. The final solution achieved a **best validation mIoU of 0.5245** on the provided validation split and includes:
+Our team trained and iteratively improved multiple segmentation models in a **Kaggle Notebook GPU environment**, then exported the best checkpoint for local inference and demo usage. The final solution achieved a **best validation mIoU of 0.5283** on the provided validation split and includes:
 
 - training code
 - batch inference code
@@ -77,8 +77,8 @@ flowchart LR
     C --> D["Augmentation + Normalization"]
     D --> E["Model Training in Kaggle"]
     E --> F["Validation mIoU Tracking"]
-    F --> G["Best Checkpoint Export"]
-    G --> H["Batch Inference + Flask Demo"]
+    F --> G["Export best_model.pth from Kaggle"]
+    G --> H["Download Locally for Batch Inference & Flask Demo"]
 ```
 
 ## 6.2 Experiment Progression
@@ -89,7 +89,7 @@ We did not jump directly to the final model. Instead, we iteratively improved th
 |---|---|---|---|
 | V1 | DINOv2 ViT-S/14 + custom ConvNeXt-style segmentation head | Kaggle-optimized prototype, 10 classes, no flower class mapping | 0.3991 |
 | V2 | DeepLabV3+ with EfficientNet-B3 encoder | Combined CE + Dice loss, stronger augmentation, better dense prediction baseline | 0.4672 |
-| V3 | DeepLabV3+ with MiT-B2 encoder | Added missing flower class, Albumentations pipeline, class weights, warm restarts, mixed precision | **0.5245** |
+| V3 | DeepLabV3+ with MiT-B2 encoder | Added missing flower class, Albumentations pipeline, class weights, warm restarts, mixed precision | **0.5283** |
 
 ### Why the Earlier Versions Were Important
 
@@ -108,7 +108,7 @@ We did not jump directly to the final model. Instead, we iteratively improved th
 - restored the missing flower class and expanded the task back to the required 11 classes
 - switched to stronger `albumentations` transforms
 - used better class weighting for rare classes and stronger optimization
-- produced the best final score: `0.5245` mIoU
+- produced the best final score: `0.5283` mIoU
 
 ## 6.3 Final Model Configuration
 
@@ -180,7 +180,7 @@ We also used:
 
 The final model achieved:
 
-- **Best validation mIoU:** `0.5245`
+- **Best validation mIoU:** `0.5283`
 - **Training duration:** `60 epochs`
 - **Best checkpoint:** exported from Kaggle as `best_model.pth`
 
@@ -196,7 +196,7 @@ The final run showed steady improvement over time:
 | 30 | 0.5139 | 1.0275 |
 | 40 | 0.5169 | 1.0147 |
 | 50 | 0.5124 | 1.0150 |
-| 57 | **0.5245** | 0.9945 |
+| 57 | **0.5283** | 0.9945 |
 | 60 | 0.5242 | 0.9908 |
 
 This trend shows that the model converged steadily and benefited from the final augmentation and optimization setup.
@@ -208,15 +208,15 @@ The best recorded run reached the following approximate class-level IoU values:
 | Class | IoU |
 |---|---:|
 | Background | 0.0000 |
-| Trees | 0.6996 |
-| Lush Bushes | 0.6016 |
-| Dry Grass | 0.6564 |
-| Dry Bushes | 0.4771 |
-| Ground Clutter | 0.3628 |
-| Flowers | 0.5839 |
-| Logs | 0.3145 |
-| Rocks | 0.4419 |
-| Landscape | 0.6197 |
+| Trees | 0.6979 |
+| Lush Bushes | 0.6015 |
+| Dry Grass | 0.6558 |
+| Dry Bushes | 0.4770 |
+| Ground Clutter | 0.3621 |
+| Flowers | 0.6201 |
+| Logs | 0.3211 |
+| Rocks | 0.4418 |
+| Landscape | 0.6514 |
 | Sky | 0.9827 |
 
 ## 7.4 Interpretation of Results
@@ -253,7 +253,7 @@ Key observations from the final results:
 
 **Fix:** We introduced richer augmentations, including affine transforms, distortion, blur, grayscale, and color jitter using `albumentations`.
 
-**Impact:** The final model generalized more robustly and reached `0.5245` mIoU.
+**Impact:** The final model generalized more robustly and reached `0.5283` mIoU.
 
 ## 8.4 Rare and Thin Classes
 
@@ -300,11 +300,11 @@ The following optimizations had the strongest impact on final performance:
 
 Our submission package contains or references the following components:
 
-- `train.py` / Kaggle training code for the final model approach
-- `test.py` for batch inference on unseen images
-- `app.py` for interactive local demo testing
-- `best_model.pth` exported from Kaggle
-- `README.md` with run instructions
+- `train.py`: The exact training code ran on Kaggle for our final model
+- `test.py`: Local batch inference script for unseen images
+- `app.py`: Flask application for interactive local demo testing
+- `best_model.pth`: Exported model weights (Hosted on Kaggle, to be downloaded and placed locally)
+- `README.md`: Run instructions
 - this markdown report for methodology, results, and analysis
 
 ## 12. Conclusion
@@ -319,7 +319,7 @@ The final system combined:
 - weighted CE + Dice loss
 - mixed precision Kaggle training
 
-This final setup achieved a **best validation mIoU of 0.5245**, outperforming our earlier DINOv2 and EfficientNet-based baselines and producing a practical model for demo inference and qualitative review.
+This final setup achieved a **best validation mIoU of 0.5283**, outperforming our earlier DINOv2 and EfficientNet-based baselines and producing a practical model for demo inference and qualitative review.
 
 ## 13. Future Work
 
@@ -334,4 +334,4 @@ The most promising next improvements are:
 
 ## 14. Short Judge Pitch
 
-We started with an early Kaggle prototype, then systematically improved the model through architecture changes, data augmentation, class remapping, and loss redesign. Our final DeepLabV3+ MiT-B2 model trained on the provided synthetic dataset reached **0.5245 validation mIoU**, supports all 11 required classes, and is packaged with both batch inference and an interactive demo for qualitative testing.
+We started with an early Kaggle prototype, then systematically improved the model through architecture changes, data augmentation, class remapping, and loss redesign. Our final DeepLabV3+ MiT-B2 model trained on the provided synthetic dataset reached **0.5283 validation mIoU**, supports all 11 required classes, and is packaged with both batch inference and an interactive demo for qualitative testing.

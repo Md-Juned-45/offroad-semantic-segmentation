@@ -8,14 +8,13 @@ import segmentation_models_pytorch as smp
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
+app = Flask(__name__)
 
-# Constants matching training
+# Constants
 N_CLASSES = 11
-MODEL_PATH = 'best_model.pth' # Update with real path when downloaded from Kaggle
+MODEL_PATH = 'best_model.pth'
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Optional: You can load the model here, but for safety in the UI without real weights:
 model = None
 
 def load_model():
@@ -25,7 +24,7 @@ def load_model():
             print(f"Loading model from {MODEL_PATH} onto {DEVICE}...")
             model = smp.DeepLabV3Plus(
                 encoder_name="mit_b2",
-                encoder_weights=None, # We load our own weights
+                encoder_weights=None,
                 in_channels=3,
                 classes=N_CLASSES,
             ).to(DEVICE)
@@ -107,9 +106,7 @@ def predict():
                 preds = torch.argmax(outputs, dim=1).squeeze(0).cpu().numpy() # (H, W)
                 
         else:
-             # MOCK DATA IF MODEL IS NOT LOADED
-             # Create random patches
-             preds = np.random.randint(0, N_CLASSES, size=(orig_h, orig_w), dtype=np.uint8)
+            return jsonify({'error': f"Model weights '{MODEL_PATH}' not found. Please download from Kaggle."}), 500
 
         # Convert class indices to RGBA Image (Make Background Transparent)
         color_mask = np.zeros((orig_h, orig_w, 4), dtype=np.uint8)
