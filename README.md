@@ -90,7 +90,7 @@ We have included `train.py` in this repository so you can see the exact code use
 The intended way to use this repository is to download our pre-trained model and run inference locally.
 
 ### 1. Download Pre-trained Weights
-Since GitHub has strict file size limits, the `best_model.pth` file (248MB) is not included in this repository. 
+Since GitHub has strict file size limits, the `best_model.pth` file is not included in this repository. 
 - Download it from our Kaggle Notebook output: [https://www.kaggle.com/code/mdjuned45/offroad-semantic-segmentation-deeplabv3-mit-b2](https://www.kaggle.com/code/mdjuned45/offroad-semantic-segmentation-deeplabv3-mit-b2)
 - Place `best_model.pth` directly in the root directory of this repository.
 
