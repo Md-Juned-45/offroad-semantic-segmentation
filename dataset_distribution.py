@@ -7,8 +7,8 @@ value_map = {0:0, 100:1, 200:2, 300:3, 500:4, 550:5, 600:6, 700:7, 800:8, 7100:9
 CLASS_NAMES = ['Background','Trees','Lush Bushes','Dry Grass','Dry Bushes',
                'Ground Clutter','Flowers','Logs','Rocks','Landscape','Sky']
 
-# Update this path to where the training segmentation masks are located on Kaggle
-mask_dir = '/kaggle/input/datasets/mdjuned45/hackon2-segmentation/Offroad_Segmentation_Training_Dataset/Offroad_Segmentation_Training_Dataset/train/Segmentation'
+# Update this path to where the training segmentation masks are located
+mask_dir = './data/train/Segmentation'
 
 pixel_counts = Counter()
 files = os.listdir(mask_dir)

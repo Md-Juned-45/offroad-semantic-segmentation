@@ -30,7 +30,7 @@ Model training was performed in a **Kaggle Notebook** using GPU acceleration. Th
 
 ## Results
 
-- Best validation mIoU: `0.5257`
+- Best validation mIoU: `0.5245`
 - Inference speed: typically under `50 ms` per image in the target setup
 - Output: colorized segmentation masks for visual inspection and a browser-based interactive demo
 
